@@ -3,284 +3,258 @@
 convert.time.series <- 
 function (fr, return.class)
 {
-    if ("quantmod.OHLC" %in% return.class) {
-        class(fr) <- c("quantmod.OHLC", "zoo")
-        return(fr)
-    } else if ("xts" %in% return.class) {
-        return(fr)
-    }
-	
-    if ("zoo" %in% return.class) {
-        return(as.zoo(fr))
-    } else if ("ts" %in% return.class) {
-        fr <- as.ts(fr)
-        return(fr)
-    } else if ("data.frame" %in% return.class) {
-        fr <- as.data.frame(fr)
-        return(fr)
-    } else if ("matrix" %in% return.class) {
-        fr <- as.data.frame(fr)
-        return(fr)
-    } else if ("its" %in% return.class) {
-        if ("package:its" %in% search() || suppressMessages(require("its",    quietly = TRUE))) {
-            fr.dates <- as.POSIXct(as.character(index(fr)))
-            fr <- its::its(coredata(fr), fr.dates)
-            return(fr)
-        } else {
-            warning(paste("'its' from package 'its' could not be loaded:", " 'xts' class returned"))
-        }
-    } else if ("timeSeries" %in% return.class) {
-        if ("package:fSeries" %in% search() || suppressMessages(require("fSeries", quietly = TRUE))) {
-            fr <- timeSeries(coredata(fr), charvec = as.character(index(fr)))
-            return(fr)
-        } else {
-            warning(paste("'timeSeries' from package 'fSeries' could not be loaded:", " 'xts' class returned"))
-        }
-    }
+	if ("quantmod.OHLC" %in% return.class) {
+		class(fr) <- c("quantmod.OHLC", "zoo")
+		return(fr)
+	} else if ("xts" %in% return.class) {
+		return(fr)
+	}
+
+	if ("zoo" %in% return.class) {
+		return(as.zoo(fr))
+	} else if ("ts" %in% return.class) {
+		fr <- as.ts(fr)
+		return(fr)
+	} else if ("data.frame" %in% return.class) {
+		fr <- as.data.frame(fr)
+		return(fr)
+	} else if ("matrix" %in% return.class) {
+		fr <- as.data.frame(fr)
+		return(fr)
+	} else if ("its" %in% return.class) {
+		if ("package:its" %in% search() || suppressMessages(require("its", quietly = TRUE))) {
+			fr.dates <- as.POSIXct(as.character(index(fr)))
+			fr <- its::its(coredata(fr), fr.dates)
+			return(fr)
+		} else {
+			warning(paste("'its' from package 'its' could not be loaded:", " 'xts' class returned"))
+		}
+	} else if ("timeSeries" %in% return.class) {
+		if ("package:fSeries" %in% search() || suppressMessages(require("fSeries", quietly = TRUE))) {
+			fr <- timeSeries(coredata(fr), charvec = as.character(index(fr)))
+			return(fr)
+		} else {
+			warning(paste("'timeSeries' from package 'fSeries' could not be loaded:", " 'xts' class returned"))
+		}
+	}
+}
+
+bdh.to.xts <- 
+function(x,...){  
+  dots <- list(...)     
+  
+  if("ticker"%in%colnames(x)){
+    x = reshape(x, timevar = "ticker", idvar = "date", direction = "wide")
+    xts(x[,-1],as.Date(x[,"date"],...))  
+  } else {   
+    #print(dots)
+    x = xts(x[,dots$field],as.Date(x[,"date"]))  
+    
+	if(!is.null(dots$name))
+		colnames(x) = dots$name
+    x
+  }
 }
 
 getSymbols.CSV2 <- 
 function (
-Symbols, env, dir = "", return.class = "xts", 
-extension = "csv", 
-cols = list(
-  Date = 1,
-  Open = 2,
-  High = 3,
-  Low = 4,   
-  Close = 5,
-  Volume = 6,
-  Adjusted = 7      
-),
-verbose = F,
-auto.assign = T,
+	Symbols, env, 
+	dir = "", 
+	return.class = "xts", 
+	extension = "csv", 
+	cols = list(
+	  Date = 1,
+	  Open = 2,
+	  High = 3,
+	  Low = 4,   
+	  Close = 5,
+	  Volume = 6,
+	  Adjusted = 7      
+	),
+	from = "",
+	to = Sys.Date(),
+	verbose = F,
+	auto.assign = T,
 ...)
 {
-importDefaults("getSymbols.csv")
-this.env <- environment()
-for (var in names(list(...))) {
-  assign(var, list(...)[[var]], this.env)
-}
+	importDefaults("getSymbols.csv")
+	this.env <- environment()
+	for (var in names(list(...))) {
+	  assign(var, list(...)[[var]], this.env)
+	}
 
-default.tz = Sys.timezone()
-default.return.class <- return.class
-default.dir <- dir
-default.extension <- extension
-default.cols <- cols
-if (missing(verbose))
-  verbose <- FALSE
+	default.tz = Sys.timezone()
+	default.return.class <- return.class
+	default.dir <- dir
+	default.extension <- extension
+	default.cols <- cols
+	
+	if (missing(verbose))
+	  verbose <- FALSE
 
-if (missing(auto.assign))
-  auto.assign <- TRUE
+	if (missing(auto.assign))
+	  auto.assign <- TRUE
 
-for (i in 1:length(Symbols)) {
-  return.class <- getSymbolLookup()[[Symbols[[i]]]]$return.class
-  return.class <- ifelse(is.null(return.class), default.return.class,return.class)
-  dir <- getSymbolLookup()[[Symbols[[i]]]]$dir
-  dir <- ifelse(is.null(dir), default.dir, dir)
-  extension <- getSymbolLookup()[[Symbols[[i]]]]$extension
-  extension <- ifelse(is.null(extension), default.extension,extension)
-  tz <- getSymbolLookup()[[Symbols[[i]]]]$tz
-  tz <- ifelse(is.null(tz), default.tz, tz)
-  
-  cols <- getSymbolLookup()[[Symbols[[i]]]]$cols
-  cols <- ifelse(is.null(cols), default.cols, cols)
-  
-  if (verbose)
-	cat("loading ", Symbols[[i]], ".....")
-  
-  if (dir == "") {
-	sym.file <- paste(Symbols[[i]], extension, sep = ".")
-  } else {
-	sym.file <- file.path(dir, paste(Symbols[[i]], extension,sep = "."))
-  }
-  
-  if (!file.exists(sym.file)) {
-	cat("\nfile ",paste(Symbols[[i]],"csv",sep=".")," does not exist ","in ",dir,"....skipping\n")
-	next
-  }
-  fr = read.csv(sym.file,header=T,stringsAsFactors=F ) #added header=TRUE      
+	for (i in 1:length(Symbols)) {
+	  return.class <- getSymbolLookup()[[Symbols[[i]]]]$return.class
+	  return.class <- ifelse(is.null(return.class), default.return.class,return.class)
+	  dir <- getSymbolLookup()[[Symbols[[i]]]]$dir
+	  dir <- ifelse(is.null(dir), default.dir, dir)
+	  extension <- getSymbolLookup()[[Symbols[[i]]]]$extension
+	  extension <- ifelse(is.null(extension), default.extension,extension)
+	  tz <- getSymbolLookup()[[Symbols[[i]]]]$tz
+	  tz <- ifelse(is.null(tz), default.tz, tz)
+	  
+	  cols <- getSymbolLookup()[[Symbols[[i]]]]$cols
+	  if(is.null(cols)) cols <- default.cols
+	  
+	  if (verbose)
+		cat("loading ", Symbols[[i]], ".....")
+	  
+	  if (dir == "") {
+		sym.file <- paste(Symbols[[i]], extension, sep = ".")
+	  } else {
+		sym.file <- file.path(dir, paste(Symbols[[i]], extension,sep = "."))
+	  }
+	  
+	  if (!file.exists(sym.file)) {
+		cat("\nfile ",paste(Symbols[[i]],"csv",sep=".")," does not exist ","in ",dir,"....skipping\n")
+		next
+	  }
+	  fr = read.csv(sym.file,header=T,stringsAsFactors=F ) #added header=TRUE      
 
-  if(is.null(cols$Date))
-	cols$Date = grep(pattern="date|index",x=colnames(fr),ignore.case=T)  
+	  if(is.null(cols$Date))
+		cols$Date = grep(pattern="date|index",x=colnames(fr),ignore.case=T)  
+		
+	  cols = lapply(cols,function(x,y) if(is.numeric(x)) x else match(x,y),y=colnames(fr))      
+	  cols[cols > ncol(fr)] = NA
+	  
+	  dates = as.Date(fr[,cols$Date],tz=tz)  
+	  cols$Date = NULL
+	  
+	  if (verbose)
+		cat("done.\n")
 
-  cols = lapply(cols,function(x,y) if(is.numeric(x)) x else match(x,y),y=colnames(fr))      
-  cols[cols > ncol(fr)] = NA
-  
-  dates = as.Date(fr[,cols$Date],tz=tz)  
-  cols$Date = NULL
-  
-  if (verbose)
-	cat("done.\n")
+	  fr = do.call("cbind",sapply(cols,FUN=function(x,fr) if(is.na(x)) NA else as.numeric(fr[,x]),fr=fr))
+	  fr = xts(fr,dates,src = "csv", updated = Sys.time())              	  	  	  
+	  fr = fr[gsub("-","",paste(from,to,sep="::"))]
+	  
+	  fr = convert.time.series(fr = fr, return.class = return.class)
+	  Symbols[[i]] = toupper(gsub("\\^", "", Symbols[[i]]))
+	  
+	  if (auto.assign)
+		assign(Symbols[[i]], fr, env)
+	}
+	if (auto.assign)
+	  return(Symbols)
 
-  fr = do.call("cbind",sapply(cols,FUN=function(x,fr) if(is.na(x)) NA else as.numeric(fr[,x]),fr=fr))
-  fr = xts(fr,dates,src = "csv", updated = Sys.time())              
-  
-  fr <- convert.time.series(fr = fr, return.class = return.class)
-  Symbols[[i]] <- toupper(gsub("\\^", "", Symbols[[i]]))
-  
-  if (auto.assign)
-	assign(Symbols[[i]], fr, env)
-}
-if (auto.assign)
-  return(Symbols)
-
-return(fr)
+	return(fr)
 }      
   
-getSymbols.John <- 
+
+getSymbols.Rbbg <- 
 function (
 	Symbols, 
 	env, 
-	dir = "", 
+	#dir = "", 
 	return.class = "xts", 
-	extension = "csv",
-	verbose=FALSE,
-	auto.assign=TRUE,
-...)
-{
-    importDefaults("getSymbols.csv")
-    this.env <- environment()
-    for (var in names(list(...))) {
-        assign(var, list(...)[[var]], this.env)
-    }
-    default.return.class <- return.class
-    default.dir <- dir
-    default.extension <- extension
-    if (missing(verbose))
-        verbose <- FALSE
-    if (missing(auto.assign))
-        auto.assign <- TRUE
-    for (i in 1:length(Symbols)) {
-        return.class <- getSymbolLookup()[[Symbols[[i]]]]$return.class
-        return.class <- ifelse(is.null(return.class), default.return.class, return.class)
-        dir <- getSymbolLookup()[[Symbols[[i]]]]$dir
-        dir <- ifelse(is.null(dir), default.dir, dir)
-        extension <- getSymbolLookup()[[Symbols[[i]]]]$extension
-        extension <- ifelse(is.null(extension), default.extension,
-            extension)
-        if (verbose)
-            cat("loading ", Symbols[[i]], ".....")
-        if (dir == "") {
-            sym.file <- paste(Symbols[[i]], extension, sep = ".")
-        }
-        else {
-            sym.file <- file.path(dir, paste(Symbols[[i]], extension,sep = "."))
-        }
-        if (!file.exists(sym.file)) {
-            cat("\nfile ", paste(Symbols[[i]], "csv", sep = ".")," does not exist ", "in ", dir, "....skipping\n")
-            next
-        }
-        fr <- read.csv(sym.file, header=TRUE) #added header=TRUE
-        if (verbose)
-            cat("done.\n")
-        fr <- xts(matrix(fr$price, dimnames=list(index(x),'price')),
-			as.Date(fr$date),   # added for getSymbols.John
-            src = "csv", updated = Sys.time()) # added for getSymbols.John
+	#extension = "csv", 
+	fields = list(	  
+	  Open = "PX_OPEN",
+	  High = "PX_HIGH",
+	  Low = "PX_LOW",   
+	  Close = "PX_LAST",
+	  Volume = "VOLUME",
+	  Adjusted = ""      
+	),
+	from = "2007-01-01",
+	to = Sys.Date(),
+	verbose = F,
+	auto.assign = T,
+	conn = NULL,
+...){
 
-# removed colnames call from original getSymbols.csv
+    importDefaults("getSymbols.Rbbg")
+	this.env <- environment()
+	for (var in names(list(...))) {
+	  assign(var, list(...)[[var]], this.env)
+	}
 
-        fr <- convert.time.series(fr = fr, return.class = return.class)
-        Symbols[[i]] <- toupper(gsub("\\^", "", Symbols[[i]]))
-        if (auto.assign)
-            assign(Symbols[[i]], fr, env)
-    }
-    if (auto.assign)
-        return(Symbols)
-    return(fr)
-}
+	default.tz = Sys.timezone()
+	default.return.class <- return.class
+	default.fields <- fields
+	
+	if (missing(verbose))
+	  verbose = FALSE
 
+	if (missing(auto.assign))
+	  auto.assign = TRUE
 
+	if('package:Rbbg' %in% search() || require('Rbbg',quietly=TRUE)) {
+		{}
+	} else {
+		stop(paste("package:",dQuote('Rbbg'),"cannot be loaded."))
+	}
+	   
+	close_conn = FALSE
+	if(is.null(conn)){
+		close_conn = TRUE
+		conn = blpConnect()
+	}
+	fromStr = as.POSIXct(from)
+	toStr = as.POSIXct(to)
+		
+	for (i in 1:length(Symbols)) {
+	  return.class <- getSymbolLookup()[[Symbols[[i]]]]$return.class
+	  return.class <- ifelse(is.null(return.class), default.return.class,return.class)
+	  
+	  tz <- getSymbolLookup()[[Symbols[[i]]]]$tz
+	  tz <- ifelse(is.null(tz),default.tz,tz)
+	  	  
+	  fields <- getSymbolLookup()[[Symbols[[i]]]]$fields
+	  if(is.null(fields)) fields <- default.fields
+	  
+	  ok_fields = sapply(fields, FUN = function(x) !is.na(x) & is.character(x) & x != "")
+	  ok_fields[names(ok_fields)=="Date"] = FALSE	  
+	  dl_fields = unlist(fields[ok_fields])
+		
+	  op_nam = NULL
+	  op_val = NULL
+	
+	  # if(ticker_ccy[j] != "LOC"){
+      #		op_nam = "currency"
+      #		op_val = ticker_ccy[j]        
+	  # }
+	  
+	  if (verbose){
+		cat("loading ", Symbols[[i]], ".....\n")
+		cat("loading ", dl_fields, ".....\n")
+	  }
+	  
+	  tmp <- try(bdh(conn,Symbols[[i]],dl_fields,fromStr,toStr,option_names = op_nam, option_values = op_val),silent=T)
+	  if(inherits(tmp,"try-error")){		
+		cat(paste(Symbols[[i]],"csv",sep=".")," failed to download....\n\n",fr, "\n\n....skipping\n")
+		next
+	  }
+	  tmp <- bdh.to.xts(tmp, field = dl_fields)
+	  
+	  fr <- xts(matrix(NA,ncol = length(fields),nrow=nrow(tmp),dimnames=list(NULL,names(fields))),index(tmp),src = "bbg", updated = Sys.time())
+	  fr[,ok_fields] = tmp
+	  
+	  fr <- convert.time.series(fr = fr, return.class = return.class)
+	  Symbols[[i]] <- toupper(gsub("\\^", "", Symbols[[i]]))
+	  
+	  if (auto.assign)
+		assign(Symbols[[i]], fr, env)
+	}
+	if(	close_conn)
+	   blpDisconnect(conn)
+	
+	if (auto.assign)
+	  return(Symbols)
 
-
-	 
-getSymbols.Bloomberg <- 
-function(
-	Symbols,
-	env,
-	return.class='xts',
-	from = as.POSIXlt(Sys.time()-60*60,"GMT"), 
-	to = as.POSIXlt(Sys.time(),"GMT"), 
-	bb.suffix="Equity", 
-	bb.interval="5",
-	verbose=FALSE,
-	auto.assign=TRUE,
-		# intraday = F,
-		# fields = NULL,		
-...) {
-
-    importDefaults("getSymbols.Bloomberg")
-    this.env <- environment()
-    for(var in names(list(...))) {
-        # import all named elements that are NON formals  
-		assign(var, list(...)[[var]], this.env)
-    }
-    if ((class(from)=="Date" && class(to)=="Date") || (class(from)=="character" && length(from)<=8 && class(to)=="character" && length(to)<=8 )) {
-       bb.intraday <- FALSE
-       bb.call <- 
-       bb.fields <- c("OPEN", "HIGH", "LOW", "PX_LAST", "VOLUME")
-    } else {
-       bb.intraday <- TRUE
-       bb.call <- bar
-       bb.fields <- "TRADE"
-    }
-    if(missing(verbose)) verbose <- FALSE
-    if(missing(auto.assign)) auto.assign <- TRUE
-       if('package:RBloomberg' %in% search() || require('RBloomberg',quietly=TRUE)) {
-         {}
-       } else {
-         stop(paste("package:",dQuote('RBloomberg'),"cannot be loaded."))
-       }
-       bbconn <- blpConnect()
-       for(i in 1:length(Symbols)) {
-           bbsym <- paste(Symbols[[i]],bb.suffix)
-
-           if(verbose) {
-               cat(paste('Loading ',bbsym, ' from BB ', from,' to ',to, paste(rep('.',18-nchar(Symbols[[i]])),collapse=''),sep=''))
-           }
-           tryCatch (
-             {
-               if (bb.intraday) {
-                 fromStr <- paste(as.character(from),".000",sep="")
-                 toStr <- paste(as.character(to),".000",sep="")
-                 b <- bb.call(bbconn, bbsym, bb.fields,fromStr, toStr, bb.interval)
-                 b$datetime <- as.POSIXct(strptime(b$time,format="%Y-%m-%dT%H:%M:%S"))
-                 bxo <- as.xts(b$open, order.by=b$datetime)
-                 fr <- merge(bxo,  b$high, b$low, b$close, b$volume)
-               } else {
-                 if (class(from)=="character") {
-                   fromStr <- from
-                 } else {
-                   fromStr <- strftime(from,format="%Y%m%d")
-                 }
-                 if (class(to)=="character") {
-                   toStr <- to
-                 } else {
-                   toStr <- strftime(to,format="%Y%m%d")
-                 }
-                 b <- bb.call(bbconn, bbsym, bb.fields, fromStr, toStr)
-                 b$datetime <- as.POSIXct(strptime(b$date,format="%Y-%m-%d"))
-                 bxo <- as.xts(b$OPEN, order.by=b$datetime)
-                 fr <- merge(bxo,  b$HIGH, b$LOW, b$PX_LAST, b$VOLUME)
-               }
-
-               if(verbose) {
-                 cat(paste(length(fr),'points '))
-               }
-               colnames(fr) <- paste(Symbols[[i]],c('Open','High','Low','Close','Volume'),sep='.')
-               fr <- convert.time.series(fr=fr,return.class=return.class)
-               if(auto.assign)
-                 assign(Symbols[[i]],fr,env)
-             },
-             error=function(e) {print(e);fr <- data.frame()}, finally=function () {if(verbose) {cat('done\n')}}
-           )
-       }
-       blpDisconnect(bbconn)
-       if(auto.assign)
-         return(Symbols)
-       return(fr)
-}
-
+	return(fr)
+}      
 
 
 getSymbols.MySQL <- 
