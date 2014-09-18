@@ -41,7 +41,7 @@ function (fr, return.class)
 
 bdh.to.xts <- 
 function(x,...){  
-  dots <- list(...)     
+  dots = list(...)     
   
   if("ticker"%in%colnames(x)){
     x = reshape(x, timevar = "ticker", idvar = "date", direction = "wide")
@@ -78,53 +78,59 @@ function (
 ...)
 {
 	importDefaults("getSymbols.csv")
-	this.env <- environment()
+	this.env = environment()
 	for (var in names(list(...))) {
 	  assign(var, list(...)[[var]], this.env)
 	}
 
 	default.tz = Sys.timezone()
-	default.return.class <- return.class
-	default.dir <- dir
-	default.extension <- extension
-	default.cols <- cols
+	default.return.class = return.class
+	default.dir = dir
+	default.extension = extension
+	default.cols = cols
 	
 	if (missing(verbose))
-	  verbose <- FALSE
+	  verbose = FALSE
 
 	if (missing(auto.assign))
-	  auto.assign <- TRUE
+	  auto.assign = TRUE
 
 	for (i in 1:length(Symbols)) {
-	  return.class <- getSymbolLookup()[[Symbols[[i]]]]$return.class
-	  return.class <- ifelse(is.null(return.class), default.return.class,return.class)
-	  dir <- getSymbolLookup()[[Symbols[[i]]]]$dir
-	  dir <- ifelse(is.null(dir), default.dir, dir)
-	  extension <- getSymbolLookup()[[Symbols[[i]]]]$extension
-	  extension <- ifelse(is.null(extension), default.extension,extension)
-	  tz <- getSymbolLookup()[[Symbols[[i]]]]$tz
-	  tz <- ifelse(is.null(tz), default.tz, tz)
+	  return.class = getSymbolLookup()[[Symbols[[i]]]]$return.class
+	  return.class = ifelse(is.null(return.class),default.return.class,return.class)
 	  
-	  cols <- getSymbolLookup()[[Symbols[[i]]]]$cols
-	  if(is.null(cols)) cols <- default.cols
+	  dir = getSymbolLookup()[[Symbols[[i]]]]$dir
+	  dir = ifelse(is.null(dir),default.dir,dir)
+	  
+	  extension = getSymbolLookup()[[Symbols[[i]]]]$extension
+	  extension = ifelse(is.null(extension),default.extension,extension)
+	  
+	  tz = getSymbolLookup()[[Symbols[[i]]]]$tz
+	  tz = ifelse(is.null(tz), default.tz, tz)
+	  
+	  cols = getSymbolLookup()[[Symbols[[i]]]]$cols
+	  if(is.null(cols)) cols = default.cols
+	  
+	  filename = getSymbolLookup()[[Symbols[[i]]]]$filename
+	  filename = ifelse(is.null(filename),Symbols[[i]],filename)
 	  
 	  if (verbose)
-		cat("loading ", Symbols[[i]], ".....")
+		cat("loading ",Symbols[[i]],".....")
 	  
 	  if (dir == "") {
-		sym.file <- paste(Symbols[[i]], extension, sep = ".")
+		sym.file = paste(filename,extension,sep = ".")
 	  } else {
-		sym.file <- file.path(dir, paste(Symbols[[i]], extension,sep = "."))
+		sym.file = file.path(dir,paste(filename,extension,sep = "."))
 	  }
 	  
 	  if (!file.exists(sym.file)) {
-		cat("\nfile ",paste(Symbols[[i]],"csv",sep=".")," does not exist ","in ",dir,"....skipping\n")
+		cat("\nfile ",paste(filename,"csv",sep=".")," does not exist ","in ",dir,"....skipping\n")
 		next
 	  }
-	  fr = read.csv(sym.file,header=T,stringsAsFactors=F ) #added header=TRUE      
+	  fr = read.csv(sym.file,header=T,stringsAsFactors=F) #added header=TRUE      
 
 	  if(is.null(cols$Date))
-		cols$Date = grep(pattern="date|index",x=colnames(fr),ignore.case=T)  
+		cols$Date = 1 #grep(pattern="date|index",x=colnames(fr),ignore.case=T)  
 		
 	  cols = lapply(cols,function(x,y) if(is.numeric(x)) x else match(x,y),y=colnames(fr))      
 	  cols[cols > ncol(fr)] = NA
@@ -135,11 +141,11 @@ function (
 	  if (verbose)
 		cat("done.\n")
 
-	  fr = do.call("cbind",sapply(cols,FUN=function(x,fr) if(is.na(x)) NA else as.numeric(fr[,x]),fr=fr))
+	  fr = sapply(cols,FUN=function(x,fr) if(is.na(x)) rep(NA,nrow(fr)) else as.numeric(fr[,x]),fr=fr)	
 	  fr = xts(fr,dates,src = "csv", updated = Sys.time())              	  	  	  
 	  fr = fr[gsub("-","",paste(from,to,sep="::"))]
 	  
-	  fr = convert.time.series(fr = fr, return.class = return.class)
+	  fr = convert.time.series(fr = fr,return.class = return.class)
 	  Symbols[[i]] = toupper(gsub("\\^", "", Symbols[[i]]))
 	  
 	  if (auto.assign)
@@ -156,9 +162,7 @@ getSymbols.Rbbg <-
 function (
 	Symbols, 
 	env, 
-	#dir = "", 
 	return.class = "xts", 
-	#extension = "csv", 
 	fields = list(	  
 	  Open = "PX_OPEN",
 	  High = "PX_HIGH",
@@ -175,14 +179,14 @@ function (
 ...){
 
     importDefaults("getSymbols.Rbbg")
-	this.env <- environment()
+	this.env = environment()
 	for (var in names(list(...))) {
 	  assign(var, list(...)[[var]], this.env)
 	}
 
 	default.tz = Sys.timezone()
-	default.return.class <- return.class
-	default.fields <- fields
+	default.return.class = return.class
+	default.fields = fields
 	
 	if (missing(verbose))
 	  verbose = FALSE
@@ -205,14 +209,17 @@ function (
 	toStr = as.POSIXct(to)
 		
 	for (i in 1:length(Symbols)) {
-	  return.class <- getSymbolLookup()[[Symbols[[i]]]]$return.class
-	  return.class <- ifelse(is.null(return.class), default.return.class,return.class)
+	  return.class = getSymbolLookup()[[Symbols[[i]]]]$return.class
+	  return.class = ifelse(is.null(return.class), default.return.class,return.class)
 	  
-	  tz <- getSymbolLookup()[[Symbols[[i]]]]$tz
-	  tz <- ifelse(is.null(tz),default.tz,tz)
-	  	  
-	  fields <- getSymbolLookup()[[Symbols[[i]]]]$fields
-	  if(is.null(fields)) fields <- default.fields
+	  tz = getSymbolLookup()[[Symbols[[i]]]]$tz
+	  tz = ifelse(is.null(tz),default.tz,tz)
+	  	
+	  ticker = getSymbolLookup()[[Symbols[[i]]]]$ticker
+	  ticker = ifelse(is.null(ticker),Symbols[[i]],ticker)
+		
+	  fields = getSymbolLookup()[[Symbols[[i]]]]$fields
+	  if(is.null(fields)) fields = default.fields
 	  
 	  ok_fields = sapply(fields, FUN = function(x) !is.na(x) & is.character(x) & x != "")
 	  ok_fields[names(ok_fields)=="Date"] = FALSE	  
@@ -231,18 +238,18 @@ function (
 		cat("loading ", dl_fields, ".....\n")
 	  }
 	  
-	  tmp <- try(bdh(conn,Symbols[[i]],dl_fields,fromStr,toStr,option_names = op_nam, option_values = op_val),silent=T)
+	  tmp = try(bdh(conn,ticker,dl_fields,fromStr,toStr,option_names = op_nam, option_values = op_val),silent=T)
 	  if(inherits(tmp,"try-error")){		
-		cat(paste(Symbols[[i]],"csv",sep=".")," failed to download....\n\n",fr, "\n\n....skipping\n")
+		cat(ticker," failed to download....\n\n",fr, "\n\n....skipping\n")
 		next
 	  }
-	  tmp <- bdh.to.xts(tmp, field = dl_fields)
+	  tmp = bdh.to.xts(tmp,field = dl_fields)
 	  
-	  fr <- xts(matrix(NA,ncol = length(fields),nrow=nrow(tmp),dimnames=list(NULL,names(fields))),index(tmp),src = "bbg", updated = Sys.time())
+	  fr = xts(matrix(NA,ncol = length(fields),nrow=nrow(tmp),dimnames=list(NULL,names(fields))),index(tmp),src="bbg",updated = Sys.time())
 	  fr[,ok_fields] = tmp
 	  
-	  fr <- convert.time.series(fr = fr, return.class = return.class)
-	  Symbols[[i]] <- toupper(gsub("\\^", "", Symbols[[i]]))
+	  fr = convert.time.series(fr = fr, return.class = return.class)
+	  Symbols[[i]] = toupper(gsub("\\^", "", Symbols[[i]]))
 	  
 	  if (auto.assign)
 		assign(Symbols[[i]], fr, env)
