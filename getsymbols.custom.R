@@ -1,7 +1,9 @@
 
 
 convert.time.series <- 
-function (fr, return.class)
+function (
+	fr, return.class
+)
 {
 	if ("quantmod.OHLC" %in% return.class) {
 		class(fr) <- c("quantmod.OHLC", "zoo")
@@ -39,8 +41,30 @@ function (fr, return.class)
 	}
 }
 
+get.symbols <- 
+function(
+	x,env
+)
+{
+    sapply(x ,FUN = function(x,env) env[[x]], env = env)                         
+}  
+
+remove.weekends <- 
+function(x){  
+  library(lubridate)
+  x[!wday(x)%in%c(1,7),]  
+}
+
+na.rm.by.col <- 
+function(x,cols = 1:ncol(x)){
+  x[!apply(is.na(x[,cols]),1,any),]  
+}
+
 bdh.to.xts <- 
-function(x,...){  
+function(
+	x,...
+)
+{  
   dots = list(...)     
   
   if("ticker"%in%colnames(x)){
@@ -54,6 +78,25 @@ function(x,...){
 		colnames(x) = dots$name
     x
   }
+}
+
+scale.one <- 
+function(
+  x,
+  overlay = F,
+  main.index = which(!is.na(x[1,]))[1]
+)
+{
+  index = 1:nrow(x)
+  if( overlay )
+    x / rep.row(apply(x, 2,
+      function(v) {
+        i = index[!is.na(v)][1]
+        v[i] / as.double(x[i,main.index])
+      }
+    ), nrow(x))
+  else
+    x / rep.row(apply(x, 2, function(v) v[index[!is.na(v)][1]]), nrow(x))
 }
 
 getSymbols.CSV2 <- 
@@ -75,7 +118,8 @@ function (
 	to = Sys.Date(),
 	verbose = F,
 	auto.assign = T,
-...)
+	...
+)
 {
 	importDefaults("getSymbols.csv")
 	this.env = environment()
