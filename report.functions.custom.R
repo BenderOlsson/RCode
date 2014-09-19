@@ -217,6 +217,9 @@ function(
 	library(RColorBrewer)
 	library(lubridate)
 
+	
+	if(!file.exists(file.path(inputPath,inputFile))) stop(file.path(inputPath,inputFile), " is missing")
+	
 	data <- read.csv(file.path(inputPath,inputFile),sep=",")
 
 	dataDaily = xts(data[,-1],as.Date(data[,1]))
