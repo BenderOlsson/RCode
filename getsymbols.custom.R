@@ -263,7 +263,7 @@ function (
 	return(fr)
 }      
 
-
+if(FALSE){
 getSymbols.MySQL <- 
 function(
 	Symbols,
@@ -326,64 +326,6 @@ function(
         return(fr)
 }
 
-getSymbols.SQLite <- 
-function(
-	Symbols,
-	env,
-	return.class='xts',
-	db.fields=c('row_names','Open','High','Low','Close','Volume','Adjusted'),
-	field.names = NULL,
-	dbname=NULL,
-	POSIX = TRUE,
-	...) {
-     importDefaults("getSymbols.SQLite")
-     this.env <- environment()
-     for(var in names(list(...))) {
-        # import all named elements that are NON formals
-        assign(var, list(...)[[var]], this.env)
-     }
-     if(missing(verbose)) verbose <- FALSE
-     if(missing(auto.assign)) auto.assign <- TRUE
-        if('package:DBI' %in% search() || require('DBI',quietly=TRUE)) {
-          if('package:RSQLite' %in% search() || require('RSQLite',quietly=TRUE)) {
-          } else { warning(paste("package:",dQuote("RSQLite"),"cannot be loaded" )) }
-        } else {
-          stop(paste("package:",dQuote('DBI'),"cannot be loaded."))
-        }
-        drv <- dbDriver("SQLite")
-        con <- dbConnect(drv,dbname=dbname)
-        db.Symbols <- dbListTables(con)
-        if(length(Symbols) != sum(Symbols %in% db.Symbols)) {
-          missing.db.symbol <- Symbols[!Symbols %in% db.Symbols]
-                warning(paste('could not load symbol(s): ',paste(missing.db.symbol,collapse=', ')))
-                Symbols <- Symbols[Symbols %in% db.Symbols]
-        }
-        for(i in 1:length(Symbols)) {
-            if(verbose) {
-                cat(paste('Loading ',Symbols[[i]],  paste(rep('.',10-nchar(Symbols[[i]])),collapse=''),  sep=''))
-            }
-            query <- paste("SELECT ",  paste(db.fields,collapse=',')," FROM ",Symbols[[i]], " ORDER BY row_names")
-            rs <- dbSendQuery(con, query)
-            fr <- fetch(rs, n=-1)
-            #fr <- data.frame(fr[,-1],row.names=fr[,1])
-            if(POSIX) {
-              d <- as.numeric(fr[,1])
-              class(d) <- c("POSIXt","POSIXct")
-              fr <- xts(fr[,-1],order.by=d)
-            } else {
-              fr <- xts(fr[,-1],order.by=as.Date(as.numeric(fr[,1]),origin='1970-01-01'))
-            }
-            colnames(fr) <- paste(Symbols[[i]], c('Open','High','Low','Close','Volume','Adjusted'),  sep='.')
-            fr <- convert.time.series(fr=fr,return.class=return.class)
-            if(auto.assign)
-              assign(Symbols[[i]],fr,env)
-            if(verbose) cat('done\n')
-        }
-        dbDisconnect(con)
-        if(auto.assign)
-          return(Symbols)
-        return(fr)
-}
 
 GetBloombergData <- 
 function
@@ -396,7 +338,7 @@ function
 	to = Sys.Date()-1,
 	periodicity = "DAILY"
 ) {
-	require(RBloomberg)	
+	require(Rbbg)	
 	
 	oNames = c("nonTradingDayFillOption", "nonTradingDayFillMethod","periodicitySelection",if(!is.null(currency)) "currency" )
 	oVal = c("ALL_CALENDAR_DAYS", "PREVIOUS_VALUE",periodicity,if(!is.null(currency)) currency ) #DAILY,WEEKLY	
@@ -426,3 +368,4 @@ function
 	allData
 }
 
+}
