@@ -156,7 +156,8 @@ function(
 create.performance.report <- 
 function(
 	inputDataFile, 
-	outputFile
+	outputFile,
+	templateFile
 )
 {  
   library(knitr)
@@ -169,12 +170,15 @@ function(
   file.copy(from = inputDataFile, to = tmpDataFile, overwrite = T)
   
   # Check template
-  f = paste(getwd(),"performanceReport_AssetAllocation.Rnw",sep="\\")
-  if(!file.exists(f)) stop("Template is missing")
-  f = chartr("\\", "/", f)
+  # f = paste(templateDir,"performanceReport_AssetAllocation.Rnw",sep="\\")  
+  if(!file.exists(templateFile)) stop("Template is missing")
+  templateFile = chartr("\\", "/", templateFile)
   
   # Convert TeX to Pdf
-  knit2pdf(f,output='PerformanceReport.tex',quiet = T)
+  inputPath <<- dirname(inputDataFile)
+  inputFile <<- basename(inputDataFile)
+  
+  knit2pdf(templateFile,output='PerformanceReport.tex',quiet=T)
   
   tmp_pdf = "PerformanceReport.pdf"
   if(file.exists(tmp_pdf)){
