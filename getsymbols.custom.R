@@ -219,7 +219,7 @@ function (
 	to = Sys.Date(),
 	verbose = F,
 	auto.assign = T,
-	conn = NULL,
+	bbgconn = NULL,
 ...){
 
     importDefaults("getSymbols.Rbbg")
@@ -243,9 +243,9 @@ function (
 	}
 	   
 	close_conn = FALSE
-	if(is.null(conn)){
+	if(is.null(bbgconn)){
 		close_conn = TRUE
-		conn = blpConnect()
+		bbgconn = blpConnect()
 	}
 	fromStr = as.POSIXct(from)
 	toStr = as.POSIXct(to)
@@ -280,7 +280,7 @@ function (
 		cat("loading ", dl_fields, ".....\n")
 	  }
 	  
-	  tmp = try(bdh(conn,ticker,dl_fields,fromStr,toStr,option_names = op_nam, option_values = op_val),silent=T)
+	  tmp = try(bdh(bbgconn,ticker,dl_fields,fromStr,toStr,option_names = op_nam, option_values = op_val),silent=T)
 	  if(inherits(tmp,"try-error")){		
 		cat(ticker," failed to download....\n\n",fr, "\n\n....skipping\n")
 		next
@@ -297,7 +297,7 @@ function (
 		assign(Symbols[[i]], fr, env)
 	}
 	if(	close_conn)
-	   blpDisconnect(conn)
+	   blpDisconnect(bbgconn)
 	
 	if (auto.assign)
 	  return(Symbols)
