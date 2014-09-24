@@ -238,9 +238,7 @@ function (
 	if (missing(auto.assign))
 	  auto.assign = TRUE
 
-	if('package:Rbbg' %in% search() || require('Rbbg',quietly=TRUE)) {
-		{}
-	} else {
+	if(!'package:Rbbg' %in% search() || !require('Rbbg',quietly=TRUE)) {
 		stop(paste("package:",dQuote('Rbbg'),"cannot be loaded."))
 	}
 	   
@@ -306,6 +304,236 @@ function (
 
 	return(fr)
 }      
+
+getSymbols.camprod <- 
+function(
+	Symbols,
+	env,
+	return.class='xts',
+	dbfields = list(	  
+	  #Open = 90,	  
+	  Close = 29,
+	  #Volume = 32,
+	  Adjusted = 134      
+	),
+		
+	from = "2007-01-01",
+	to = Sys.Date(),
+	verbose = F,
+	auto.assign = T,
+	dbconn = NULL,
+	...) 
+{
+     importDefaults("getSymbols.MySQL")
+     this.env <- environment()
+     for(var in names(list(...))) {
+        # import all named elements that are NON formals
+        assign(var, list(...)[[var]], this.env)
+     }
+	 
+	 if(!'package:RODBC'%in% search() || !require('RODBC',quietly=TRUE)) {         
+		stop(paste("package:",dQuote('RODBC'),"cannot be loaded."))
+	 }
+    
+     if(is.null(dbconn)) {
+		stop(paste('At least one connection argument (',sQuote('dbconn'),") is not set"))
+	 }
+	
+	 default.tz = Sys.timezone()
+	 default.return.class = return.class
+	 default.dbfields = dbfields
+	 default.dsid = '1'
+	 	
+     if(missing(verbose)) verbose = FALSE
+     if(missing(auto.assign)) auto.assign = TRUE
+	 
+	 fromStr = as.POSIXct(from)
+	 toStr = as.POSIXct(to)
+	 ccyid = -1		
+	 
+	 db = odbcConnect(dbconn)
+	                           		
+	 for (i in 1:length(Symbols)) {
+		return.class = getSymbolLookup()[[Symbols[[i]]]]$return.class
+		return.class = ifelse(is.null(return.class), default.return.class,return.class)
+	  
+		tz = getSymbolLookup()[[Symbols[[i]]]]$tz
+		tz = ifelse(is.null(tz),default.tz,tz)
+	  	
+		iid = getSymbolLookup()[[Symbols[[i]]]]$iid
+		iid = ifelse(is.null(iid),Symbols[[i]],iid)
+		
+		dbfields = getSymbolLookup()[[Symbols[[i]]]]$dbfields
+		if(is.null(dbfields)) dbfields = default.dbfields
+	  
+	  	dsid = getSymbolLookup()[[Symbols[[i]]]]$dsid
+		if(is.null(dsid)) dsid = default.dsid
+		
+	  
+		if(verbose) {
+			cat(paste('Loading ',Symbols[[i]],paste(rep('.',10-nchar(Symbols[[i]])),collapse=''),sep=''))
+		}
+				
+		fr = NULL		
+		for(j in 1:length(dbfields)){
+		
+			tmp = switch(names(dbfields[j]),				
+				Close = {
+					query = paste0("CALL GetPeriodPrices(",iid,",",ccyid,",'",fromStr,"','",toStr,"','",dsid,"',0,0,0,1);")			
+					rs = sqlQuery(db,query)				
+					xts(as.matrix(rs[,2]), order.by=as.Date(rs[,1],origin='1970-01-01'),src='db',updated=Sys.time())			
+				},		
+				Adjusted = {
+					query = paste0("CALL GetPeriodPrices(",iid,",",ccyid,",'",fromStr,"','",toStr,"','",dsid,"',1,0,0,1);")			
+					rs = sqlQuery(db,query)	
+					rs[,3] = ifelse(rs[,3] == "raw(0)" | is.na(rs[,3]),0,rs[,3])														
+					rs = xts(as.matrix(rs[,2:3]), order.by=as.Date(rs[,1],origin='1970-01-01'), src='db',updated=Sys.time())				
+					cumprod(c(rs[1,1],((rs[,2]+rs[,1])/lag(rs[,1]))[-1]))				
+				},
+				NA
+			)					
+			fr = cbind(fr,tmp)			
+		}		
+		names(fr) = names(dbfields)
+		  		  		        
+		fr <- convert.time.series(fr=fr,return.class=return.class)
+		if(auto.assign)
+		  assign(Symbols[[i]],fr,env)
+		  
+		if(verbose) cat('done\n')
+	}
+	odbcClose(db)
+	if(auto.assign)
+	  return(Symbols)
+	return(fr)
+}
+
+###############################################################################
+#' Helper function to extend functionality of getSymbols
+#'
+#' Syntax to specify tickers:
+#' * Basic : XLY
+#' * Rename: BOND=TLT
+#' * Extend: XLB+RYBIX
+#' * Mix above: XLB=XLB+RYBIX+FSDPX+FSCHX+PRNEX+DREVX
+#' Symbols = spl('XLY, BOND=TLT,XLY+RYBIX,XLB=XLB+RYBIX+FSDPX+FSCHX+PRNEX+DREVX')
+
+#' tickers=spl('XLB+RYBIX+FSDPX+FSCHX+PRNEX+DREVX,
+#' XLE+RYEIX+VGENX+FSENX+PRNEX+DREVX,
+#' XLF+FIDSX+SCDGX+DREVX,
+#' XLI+FSCGX+VFINX+FEQIX+DREVX,
+#' XLK+RYTIX+KTCBX+FSPTX+FTCHX+FTRNX+DREVX,
+#' XLP+FDFAX+FSPHX+OARDX+DREVX,
+#' XLU+FSUTX+DREVX,
+#' XLV+VGHCX+VFINX+DREVX,
+#' XLY+FSRPX+DREVX,
+#' BOND+IEI+VFIUX+VFITX+FSTGX+FGOVX+STVSX+FGMNX+FKUSX')
+#' 
+#' data <- new.env()
+#'   getSymbols.extra(tickers, src = 'yahoo', from = '1980-01-01', env = data, auto.assign = T)
+#' bt.start.dates(data)
+#' 
+#' @export 
+################################################################################
+getSymbols.extra.new <- function 
+(
+	Symbols = NULL, 
+	env = parent.frame(), 
+	getSymbols.fn = getSymbols,
+	raw.data = new.env(),		# extra pre-loaded raw data
+	set.symbolnames = F,
+	auto.assign = T,  
+	...
+) 
+{
+	if(is.character(Symbols)) Symbols = spl(Symbols)
+	if(len(Symbols) < 1) return(Symbols)
+	
+	Symbols = toupper(gsub('\n','',Symbols))
+		
+	# split
+	map = list()
+	for(s in Symbols) {
+		name = iif(len(spl(s, '=')) > 1, spl(s, '=')[1], spl(s, '\\+')[1])
+		values = spl(iif(len(spl(s, '=')) > 1, spl(s, '=')[2], s), '\\+')
+		map[[trim(name)]] = trim(values)
+	}
+	Symbols = unique(unlist(map))
+	
+	# find overlap with raw.data
+	Symbols = setdiff(Symbols, ls(raw.data))
+	
+	# download
+	data <- new.env()
+	if(len(Symbols) > 0) match.fun(getSymbols.fn)(Symbols, env=data, auto.assign = T, ...)
+	for(n in ls(raw.data)) data[[n]] = raw.data[[n]]
+	
+	# reconstruct, please note getSymbols replaces ^ symbols
+	if (set.symbolnames) env$symbolnames = names(map)
+	for(s in names(map)) {
+		env[[ s ]] = data[[ gsub('\\^', '', map[[ s ]][1]) ]]
+		if( len(map[[ s ]]) > 1)
+			for(i in 2:len(map[[ s ]])) 
+				env[[ s ]] = extend.data.new(env[[ s ]], data[[ gsub('\\^', '', map[[ s ]][i]) ]], scale=T) 			
+		if (!auto.assign)
+       		return(env[[ s ]])			
+	}			
+}
+
+# gold = extend.GLD(data$GLD)
+# comm = extend.data(data$DBC, get.CRB(), scale=T)
+#' @export 
+extend.data.new <- function
+(
+	current,
+	hist,
+	scale = F
+) 
+{
+	colnames(current) = sapply(colnames(current), function(x) last(spl(x,'\\.')))
+	colnames(hist) = sapply(colnames(hist), function(x) last(spl(x,'\\.')))
+
+	# find Close in hist
+	close.index.current = has.Cl(current,T)	
+	close.index.hist = has.Cl(hist,T)		
+	if(!close.index.current) close.index.current = 1
+	if(!close.index.hist) close.index.hist = 1
+	
+	adjusted.index.current = has.Ad(current,T)	
+	adjusted.index.hist = has.Ad(hist,T)		
+	if(!adjusted.index.current) adjusted.index.current = close.index.current
+	if(!adjusted.index.hist) adjusted.index.hist = close.index.hist
+	
+	if(scale) {
+		# find first common observation in current and hist series
+		common = merge(current[,close.index.current], hist[,close.index.hist], join='inner')		
+		scale = as.numeric(common[1,1]) / as.numeric(common[1,2])
+			
+		if( close.index.hist == adjusted.index.hist )	
+			hist = hist * scale
+		else {
+			hist[,-adjusted.index.hist] = hist[,-adjusted.index.hist] * scale
+			
+			common = merge(current[,adjusted.index.current], hist[,adjusted.index.hist], join='inner')
+			scale = as.numeric(common[1,1]) / as.numeric(common[1,2])
+			hist[,adjusted.index.hist] = hist[,adjusted.index.hist] * scale
+		}
+	}
+	
+	# subset history before current
+	hist = hist[format(index(current[1])-1,'::%Y:%m:%d'),,drop=F]
+	
+	
+	if( ncol(hist) != ncol(current) )	
+		#hist = make.xts( rep.col(hist[,close.index], ncol(current)), index(hist))
+		hist = hist[, colnames(current)]
+	else
+		hist = hist[, colnames(current)]
+	
+	colnames(hist) = colnames(current)
+		
+	rbind( hist, current )
+}
 
 if(FALSE){
 getSymbols.MySQL <- 

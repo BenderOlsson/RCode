@@ -146,8 +146,7 @@ if(FALSE){
 sanitizeLatexS <- 
 function(
 	str
-) 
-{
+){
 	#gsub('([#$%&~_\\^\\\\{}])', '\\\\\\\\\\1', str, perl = TRUE);
 	gsub('([#$%&~_\\^\\\\{}])', '\\\\\\1', str, perl = TRUE);
 }
