@@ -371,7 +371,7 @@ function(
 		
 	  
 		if(verbose) {
-			cat(paste('Loading ',Symbols[[i]],paste(rep('.',10-nchar(Symbols[[i]])),collapse=''),sep=''))
+			cat(paste('Loading ',Symbols[[i]],paste(rep('.',10-nchar(Symbols[[i]])),collapse=''),sep=''),"\n")
 		}
 				
 		fr = NULL		
@@ -446,11 +446,16 @@ getSymbols.extra.new <- function
 	...
 ) 
 {
+	this.env = environment()
+	for (var in names(list(...))) {
+	  assign(var, list(...)[[var]], this.env)
+	}
+	
 	if(is.character(Symbols)) Symbols = spl(Symbols)
 	if(len(Symbols) < 1) return(Symbols)
 	
 	Symbols = toupper(gsub('\n','',Symbols))
-		
+			
 	# split
 	map = list()
 	for(s in Symbols) {
@@ -465,8 +470,9 @@ getSymbols.extra.new <- function
 	
 	# download
 	data <- new.env()
-	if(len(Symbols) > 0) match.fun(getSymbols.fn)(Symbols, env=data, auto.assign = T, ...)
+	if(len(Symbols) > 0) suppressWarnings(match.fun(getSymbols.fn)(Symbols, env=data, auto.assign = T, ...))
 	for(n in ls(raw.data)) data[[n]] = raw.data[[n]]
+	
 	
 	# reconstruct, please note getSymbols replaces ^ symbols
 	if (set.symbolnames) env$symbolnames = names(map)
