@@ -276,8 +276,8 @@ function (
 	  # }
 	  
 	  if (verbose){
-		cat("loading ", Symbols[[i]], ".....\n")
-		cat("loading ", dl_fields, ".....\n")
+		cat("loading ",Symbols[[i]],".....")
+		#cat("loading ", dl_fields, ".....\n")
 	  }
 	  
 	  tmp = try(bdh(bbgconn,ticker,dl_fields,fromStr,toStr,option_names = op_nam, option_values = op_val),silent=T)
@@ -371,7 +371,8 @@ function(
 		
 	  
 		if(verbose) {
-			cat(paste('Loading ',Symbols[[i]],paste(rep('.',10-nchar(Symbols[[i]])),collapse=''),sep=''),"\n")
+			#cat(paste('loading ',Symbols[[i]],paste(rep('.',10-nchar(Symbols[[i]])),collapse=''),sep=''),"\n")
+			cat("loading ",Symbols[[i]],".....")
 		}
 				
 		fr = NULL		
