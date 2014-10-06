@@ -287,6 +287,9 @@ function (
 	  }
 	  tmp = bdh.to.xts(tmp,field = dl_fields)
 	  
+	  if (verbose)
+		cat("done.\n")
+		
 	  fr = xts(matrix(NA,ncol = length(fields),nrow=nrow(tmp),dimnames=list(NULL,names(fields))),index(tmp),src="bbg",updated = Sys.time())
 	  fr[,ok_fields] = tmp
 	  
