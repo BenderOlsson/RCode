@@ -121,7 +121,7 @@ function (
 	...
 )
 {
-	importDefaults("getSymbols.csv")
+	#importDefaults("getSymbols.csv")
 	this.env = environment()
 	for (var in names(list(...))) {
 	  assign(var, list(...)[[var]], this.env)
@@ -222,7 +222,7 @@ function (
 	bbgconn = NULL,
 ...){
 
-    importDefaults("getSymbols.Rbbg")
+    #importDefaults("getSymbols.Rbbg")
 	this.env = environment()
 	for (var in names(list(...))) {
 	  assign(var, list(...)[[var]], this.env)
@@ -327,7 +327,7 @@ function(
 	dbconn = NULL,
 	...) 
 {
-     importDefaults("getSymbols.MySQL")
+     #importDefaults("getSymbols.MySQL")
      this.env <- environment()
      for(var in names(list(...))) {
         # import all named elements that are NON formals
