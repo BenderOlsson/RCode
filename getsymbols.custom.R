@@ -202,6 +202,9 @@ function (
 }      
   
 
+  getSymbols.Rbbg("ES1 Index",data,fields = list(  Close = "PX_LAST",Adjusted = "TOT_RETURN_INDEX_NET_DVDS"),
+  from = "2014-09-30",bbconn= conn)
+  
 getSymbols.Rbbg <- 
 function (
 	Symbols, 
@@ -290,7 +293,7 @@ function (
 	  if (verbose)
 		cat("done.\n")
 		
-	  fr = xts(matrix(NA,ncol = length(fields),nrow=nrow(tmp),dimnames=list(NULL,names(fields))),index(tmp),src="bbg",updated = Sys.time())
+	  fr = xts(matrix(double(),ncol = length(fields),nrow=nrow(tmp),dimnames=list(NULL,names(fields))),index(tmp),src="bbg",updated = Sys.time())
 	  fr[,ok_fields] = tmp
 	  
 	  fr = convert.time.series(fr = fr, return.class = return.class)
