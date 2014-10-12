@@ -72,7 +72,7 @@ function(
     xts(x[,-1],as.Date(x[,"date"],...))  
   } else {   
     #print(dots)
-    x = xts(x[,dots$field],as.Date(x[,"date"]))  
+    x = xts(apply(x[,dots$field],2,as.numeric),as.Date(x[,"date"]))  
     
 	if(!is.null(dots$name))
 		colnames(x) = dots$name
@@ -202,8 +202,7 @@ function (
 }      
   
 
-  getSymbols.Rbbg("ES1 Index",data,fields = list(  Close = "PX_LAST",Adjusted = "TOT_RETURN_INDEX_NET_DVDS"),
-  from = "2014-09-30",bbconn= conn)
+ #getSymbols.Rbbg("ES1 Index",data,fields = list(  Close = "PX_LAST",Adjusted = "TOT_RETURN_INDEX_NET_DVDS"),from = "2014-09-30",bbconn= conn)
   
 getSymbols.Rbbg <- 
 function (
