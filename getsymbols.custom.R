@@ -497,54 +497,55 @@ getSymbols.extra.new <- function
 #' @export 
 extend.data.new <- function
 (
-	current,
-	hist,
+	current_data,
+	hist_data,
 	scale = F
 ) 
 {
-	colnames(current) = sapply(colnames(current), function(x) last(spl(x,'\\.')))
-	colnames(hist) = sapply(colnames(hist), function(x) last(spl(x,'\\.')))
+	colnames(current_data) = sapply(colnames(current_data), function(x) last(spl(x,'\\.')))
+	colnames(hist_data) = sapply(colnames(hist_data), function(x) last(spl(x,'\\.')))
 
 	# find Close in hist
-	close.index.current = has.Cl(current,T)	
-	close.index.hist = has.Cl(hist,T)		
+	close.index.current = has.Cl(current_data,T)	
+	close.index.hist = has.Cl(hist_data,T)		
 	if(!close.index.current) close.index.current = 1
 	if(!close.index.hist) close.index.hist = 1
 	
-	adjusted.index.current = has.Ad(current,T)	
-	adjusted.index.hist = has.Ad(hist,T)		
-	if(!adjusted.index.current) adjusted.index.current = close.index.current
-	if(!adjusted.index.hist) adjusted.index.hist = close.index.hist
+	adjusted.index.current = has.Ad(current_data,T)	
+	adjusted.index.hist = has.Ad(hist_data,T)		
+	if(!adjusted.index.current || all(is.na(hist_data[,adjusted.index.current]))) adjusted.index.current = close.index.current
+	if(!adjusted.index.hist || all(is.na(hist_data[,adjusted.index.hist]))) adjusted.index.hist = close.index.hist
 	
 	if(scale) {
 		# find first common observation in current and hist series
-		common = merge(current[,close.index.current], hist[,close.index.hist], join='inner')		
+		common = merge(current_data[,close.index.current], hist_data[,close.index.hist], join='inner')		
+		common = na.omit(common)
 		scale = as.numeric(common[1,1]) / as.numeric(common[1,2])
 			
-		if( close.index.hist == adjusted.index.hist )	
-			hist = hist * scale
-		else {
-			hist[,-adjusted.index.hist] = hist[,-adjusted.index.hist] * scale
+		if( close.index.hist == adjusted.index.hist){
+			hist_data = hist_data * scale
+		} else {
+			hist_data[,-adjusted.index.hist] = hist_data[,-adjusted.index.hist] * scale
 			
-			common = merge(current[,adjusted.index.current], hist[,adjusted.index.hist], join='inner')
+			common = merge(current_data[,adjusted.index.current], hist_data[,adjusted.index.hist], join='inner')
 			scale = as.numeric(common[1,1]) / as.numeric(common[1,2])
-			hist[,adjusted.index.hist] = hist[,adjusted.index.hist] * scale
+			hist_data[,adjusted.index.hist] = hist_data[,adjusted.index.hist] * scale
 		}
 	}
 	
 	# subset history before current
-	hist = hist[format(index(current[1])-1,'::%Y:%m:%d'),,drop=F]
+	#hist_data = hist_data[format(index(current_data[1])-1,'::%Y:%m:%d'),,drop=F]
+	hist_data = hist_data[format(index(common[1])-1,'::%Y:%m:%d'),,drop=F]
 	
-	
-	if( ncol(hist) != ncol(current) )	
+	if(ncol(hist_data) != ncol(current_data)){
 		#hist = make.xts( rep.col(hist[,close.index], ncol(current)), index(hist))
-		hist = hist[, colnames(current)]
-	else
-		hist = hist[, colnames(current)]
-	
-	colnames(hist) = colnames(current)
+		hist_data = hist_data[,colnames(current_data)]
+	} else {
+		hist_data = hist_data[,colnames(current_data)]
+	}	
+	colnames(hist_data) = colnames(current_data)
 		
-	rbind( hist, current )
+	rbind( hist_data, current_data )
 }
 
 if(FALSE){
