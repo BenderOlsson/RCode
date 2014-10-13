@@ -72,7 +72,7 @@ function(
     xts(x[,-1],as.Date(x[,"date"],...))  
   } else {   
     #print(dots)
-    x = xts(apply(x[,dots$field],2,as.numeric),as.Date(x[,"date"]))  
+    x = xts(apply(x[,dots$field,drop=F],2,as.numeric),as.Date(x[,"date"]))  
     
 	if(!is.null(dots$name))
 		colnames(x) = dots$name
