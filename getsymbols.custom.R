@@ -506,30 +506,30 @@ extend.data.new <- function
 	colnames(hist_data) = sapply(colnames(hist_data), function(x) last(spl(x,'\\.')))
 
 	# find Close in hist
-	close.index.current = has.Cl(current_data,T)	
-	close.index.hist = has.Cl(hist_data,T)		
-	if(!close.index.current) close.index.current = 1
-	if(!close.index.hist) close.index.hist = 1
+	close_index_current = has.Cl(current_data,T)	
+	close_index_hist = has.Cl(hist_data,T)		
+	if(!close_index_current) close_index_current = 1
+	if(!close_index_hist) close_index_hist = 1
 	
-	adjusted.index.current = has.Ad(current_data,T)	
-	adjusted.index.hist = has.Ad(hist_data,T)		
-	if(!adjusted.index.current || all(is.na(hist_data[,adjusted.index.current]))) adjusted.index.current = close.index.current
-	if(!adjusted.index.hist || all(is.na(hist_data[,adjusted.index.hist]))) adjusted.index.hist = close.index.hist
+	adjusted_index_current = has.Ad(current_data,T)	
+	adjusted_index_hist = has.Ad(hist_data,T)		
+	if(!adjusted_index_current || all(is.na(hist_data[,adjusted_index_current]))) adjusted_index_current = close_index_current
+	if(!adjusted_index_hist || all(is.na(hist_data[,adjusted_index_hist]))) adjusted_index_hist = close_index_hist
 	
 	if(scale) {
 		# find first common observation in current and hist series
-		common = merge(current_data[,close.index.current], hist_data[,close.index.hist], join='inner')		
+		common = merge(current_data[,close_index_current],hist_data[,close_index_hist],join='inner')		
 		common = na.omit(common)
 		scale = as.numeric(common[1,1]) / as.numeric(common[1,2])
 			
-		if( close.index.hist == adjusted.index.hist){
+		if(close_index_hist == adjusted_index_hist){
 			hist_data = hist_data * scale
 		} else {
-			hist_data[,-adjusted.index.hist] = hist_data[,-adjusted.index.hist] * scale
+			hist_data[,-adjusted_index_hist] = hist_data[,-adjusted_index_hist] * scale
 			
-			common = merge(current_data[,adjusted.index.current], hist_data[,adjusted.index.hist], join='inner')
-			scale = as.numeric(common[1,1]) / as.numeric(common[1,2])
-			hist_data[,adjusted.index.hist] = hist_data[,adjusted.index.hist] * scale
+			common = merge(current_data[,adjusted_index_current],hist_data[,adjusted_index_hist], join='inner')
+			scale = as.numeric(common[1,1])/as.numeric(common[1,2])
+			hist_data[,adjusted_index_hist] = hist_data[,adjusted_index_hist] * scale
 		}
 	}
 	
@@ -543,9 +543,8 @@ extend.data.new <- function
 	} else {
 		hist_data = hist_data[,colnames(current_data)]
 	}	
-	colnames(hist_data) = colnames(current_data)
-		
-	rbind( hist_data, current_data )
+	colnames(hist_data) = colnames(current_data)		
+	rbind(hist_data,na.omit(current_data))
 }
 
 if(FALSE){
