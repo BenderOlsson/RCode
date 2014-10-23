@@ -13,8 +13,7 @@ matrix.to.df <- function(x, header = NA,...){
   as.data.frame(x,...)  
 }
 
-has.Mcap <- function (x, which = FALSE) 
-{
+has.Mcap <- function (x, which = FALSE){
   colAttr <- attr(x, "Mcap")
   if (!is.null(colAttr)) 
     return(if (which) colAttr else TRUE)
