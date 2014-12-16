@@ -547,6 +547,104 @@ extend.data.new <- function
 	rbind(hist_data,na.omit(current_data))
 }
 
+
+getSymbols.odbc <- 
+function (Symbols, env, 
+
+return.class = "xts", 
+# db.fields = c("date", "open", "high", "low", "close", "volume", "adjusted"), field.names = NULL, 
+dbfields = list(
+	index = 'rownames',
+  Open = 'open',	  
+  High = 'high',
+  Low = 'low',
+  Close = 'close',
+  Volume = 'volume',
+  Adjusted = 'adjusted'     
+),
+from = "2007-01-01",
+to = Sys.Date(),
+verbose = F,
+auto.assign = T,
+dbconn = NULL,
+...) {
+    this.env <- environment()
+    for (var in names(list(...))) {
+        assign(var, list(...)[[var]], this.env)
+    }
+    if (missing(verbose)) 
+        verbose <- FALSE
+		
+    if (missing(auto.assign)) 
+        auto.assign <- TRUE
+		
+	if(!'package:RODBC'%in% search() || !require('RODBC',quietly=TRUE)) {         
+		stop(paste("package:",dQuote('RODBC'),"cannot be loaded."))
+	}
+    
+    if(is.null(dbconn)) {
+		stop(paste('At least one connection argument (',sQuote('dbconn'),") is not set"))
+	}
+	
+	 default.tz = Sys.timezone()
+	 default.return.class = return.class
+	 default.dbfields = dbfields
+	 
+	con = odbcConnect("yahoo_local")
+    db.Symbols <- sqlTables(con)[,"TABLE_NAME"]
+    if (length(Symbols) != sum(Symbols %in% db.Symbols)) {
+        missing.db.symbol <- Symbols[!Symbols %in% db.Symbols]
+        warning(paste("could not load symbol(s): ", paste(missing.db.symbol, collapse = ", ")))
+        Symbols <- Symbols[Symbols %in% db.Symbols]
+    }
+    for (i in 1:length(Symbols)) {
+        if (verbose) {
+            cat(paste("Loading ", Symbols[[i]], paste(rep(".",10 - nchar(Symbols[[i]])), collapse = ""), sep = ""))
+        }
+		
+		return.class = getSymbolLookup()[[Symbols[[i]]]]$return.class
+		return.class = ifelse(is.null(return.class), default.return.class,return.class)
+	  
+		tz = getSymbolLookup()[[Symbols[[i]]]]$tz
+		tz = ifelse(is.null(tz),default.tz,tz)
+	  	
+		iid = getSymbolLookup()[[Symbols[[i]]]]$iid
+		iid = ifelse(is.null(iid),Symbols[[i]],iid)
+		
+		dbfields = getSymbolLookup()[[Symbols[[i]]]]$dbfields
+		if(is.null(dbfields)) dbfields = default.dbfields
+	  
+	  	dsid = getSymbolLookup()[[Symbols[[i]]]]$dsid
+		if(is.null(dsid)) dsid = default.dsid
+		
+		
+        query <- paste("SELECT", paste(dbfields, collapse = ","),"FROM", Symbols[[i]])        
+		
+		fr = sqlQuery(con, query)
+		
+        fr <- xts(as.matrix(fr[, -1]), order.by = as.Date(fr[,1], origin = "1970-01-01"), src = dbname, updated = Sys.time())
+		
+		names(dbfields)
+		
+        colnames(fr) <- paste(Symbols[[i]], c("Open", "High", "Low", "Close", "Volume", "Adjusted"), sep = ".")
+		
+		
+        fr <- convert.time.series(fr = fr, return.class = return.class)
+        if (auto.assign) 
+            assign(Symbols[[i]], fr, env)
+        if (verbose) 
+            cat("done\n")
+    }
+	
+    odbcClose(con)
+	
+    if (auto.assign) 
+        return(Symbols)
+    return(fr)
+}
+
+
+
 if(FALSE){
 getSymbols.MySQL <- 
 function(

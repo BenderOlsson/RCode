@@ -38,6 +38,13 @@ rollapply.partial <- function(x, width = 10, FUN = mean, max.na = 0.1, ...){
   tmp  
 }
 
+get.last.friday <- function(end_date){
+  while (wday(end_date,label = T,abbr = T) != 'Fri'){
+    end_date = end_date - days(1)      
+  }
+  return(end_date)
+}
+
 diff.by.days <- function(x, y = NULL, nlag = 1, period.fn = days){
   library(data.table)
   library(lubridate)
